@@ -2,8 +2,8 @@
 import React from 'react'; // eslint-disable-line no-unused-vars
 import { Navigate, Outlet } from 'react-router-dom';
 
-const ProtectedRoutes = ({ isLoggedIn }) => {
-  return isLoggedIn ? <Outlet /> : <Navigate to={'/auth'} />;
+const ProtectedRoutes = ({ token }) => {
+  return token ? <Outlet /> : <Navigate to={'/auth'} />;
 };
 
 export default ProtectedRoutes;

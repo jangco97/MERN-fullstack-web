@@ -2,8 +2,8 @@
 import React from 'react'; // eslint-disable-line no-unused-vars
 import { Navigate, Outlet } from 'react-router-dom';
 
-const NotAuthRoutes = ({ isLoggedIn }) => {
-  return isLoggedIn ? <Navigate to={'/'} /> : <Outlet />;
+const NotAuthRoutes = ({ token }) => {
+  return token ? <Navigate to={'/'} /> : <Outlet />;
 };
 
 export default NotAuthRoutes;
