@@ -1,4 +1,6 @@
 const { validationResult } = require("express-validator");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 
 const HttpError = require("../models/httpError");
 const User = require("../models/userSchema");
@@ -48,11 +50,22 @@ const signup = async (req, res, next) => {
     return next(error);
   }
 
+  let hashedPassword;
+  try {
+    hashedPassword = await bcrypt.hash(password, 12);
+  } catch (err) {
+    const error = new HttpError(
+      "비밀번호를 암호화하는데 실패했습니다. 다시 시도해주세요.",
+      500
+    );
+    return next(error);
+  }
+
   const createdUser = new User({
     name,
     email,
     image: "https://live.staticflickr.com/7631/26849088292_36fc52ee90_b.jpg",
-    password,
+    password: hashedPassword,
     places: [],
   });
 
@@ -66,7 +79,23 @@ const signup = async (req, res, next) => {
     return next(error);
   }
 
-  res.status(201).json({ user: createdUser.toObject({ getters: true }) });
+  let token;
+  try {
+    token = jwt.sign(
+      { userId: createdUser.id, email: createdUser.email },
+      process.env.SECRET_KEY,
+      { expiresIn: "1h" }
+    ); //몽고db가 자동으로 생성한 id를 사용자의 id로 사용
+  } catch (err) {
+    const error = new HttpError(
+      "회원가입에 실패했습니다. 다시 시도해주세요.",
+      500
+    );
+    return next(error);
+  }
+  res
+    .status(201)
+    .json({ userId: createdUser.id, email: createdUser.email, token: token });
 };
 
 const login = async (req, res, next) => {
@@ -84,15 +113,52 @@ const login = async (req, res, next) => {
     return next(error);
   }
 
-  if (!existingUser || existingUser.password !== password) {
+  if (!existingUser) {
     const error = new HttpError(
       "로그인에 실패했습니다. 아이디와 비밀번호를 확인해주세요.",
       401
     );
     return next(error);
   }
+  let isValidPassword = false;
+  try {
+    isValidPassword = await bcrypt.compare(password, existingUser.password);
+  } catch (err) {
+    const error = new HttpError(
+      "로그인에 실패했습니다. 다시 시도해주세요.",
+      500
+    );
+    return next(error);
+  }
 
-  res.json({ message: "로그인에 성공했습니다." });
+  if (!isValidPassword) {
+    const error = new HttpError(
+      "로그인에 실패했습니다. 비밀번호를 확인해주세요.",
+      401
+    );
+    return next(error);
+  }
+
+  let token;
+  try {
+    token = jwt.sign(
+      { userId: existingUser.id, email: existingUser.email },
+      process.env.SECRET_KEY,
+      { expiresIn: "1h" }
+    ); //몽고db가 자동으로 생성한 id를 사용자의 id로 사용
+  } catch (err) {
+    const error = new HttpError(
+      "로그인에 실패했습니다. 다시 시도해주세요.",
+      500
+    );
+    return next(error);
+  }
+
+  res.json({
+    userId: existingUser.id,
+    email: existingUser.email,
+    token: token,
+  });
 };
 
 exports.getUsers = getUsers;
