@@ -1,3 +1,5 @@
+const fs = require("fs");
+const path = require("path");
 const express = require("express");
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
@@ -15,6 +17,7 @@ app.use(cors());
 
 app.use(bodyParser.json());
 
+app.use("/uploads/images", express.static(path.join("uploads", "images")));
 // app.use((req, res, next) => {
 //   res.setHeader("Access-Control-Allow-Origin", "*");
 //   res.setHeader(
@@ -39,6 +42,12 @@ app.use((req, res, next) => {
 
 //에러 핸들링
 app.use((error, req, res, next) => {
+  //multer가 에러를 던지면 파일을 삭제한다.
+  if (req.file) {
+    fs.unlink(req.file.path, (err) => {
+      console.log(err);
+    });
+  }
   if (res.headerSent) {
     return next(error);
   }
