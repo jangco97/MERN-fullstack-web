@@ -1,6 +1,6 @@
 const express = require("express");
 const { check } = require("express-validator");
-
+const multerUpload = require("../middleware/multerUpload");
 const placeControllers = require("../controllers/placeControllers");
 const checkAuth = require("../middleware/checkAuth");
 
@@ -14,6 +14,7 @@ router.use(checkAuth);
 
 router.post(
   "/",
+  multerUpload.single("image"),
   [
     check("title").not().isEmpty(),
     check("description").isLength({ min: 7 }),
