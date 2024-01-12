@@ -1,4 +1,5 @@
 const { v4: uuidv4 } = require("uuid");
+const fs = require("fs");
 const mongoose = require("mongoose");
 const { validationResult } = require("express-validator");
 
@@ -69,7 +70,7 @@ const createPlace = async (req, res, next) => {
     );
   }
 
-  const { title, description, address, creator } = req.body;
+  const { title, description, address } = req.body;
 
   let coordinates;
   try {
@@ -83,14 +84,13 @@ const createPlace = async (req, res, next) => {
     description,
     address,
     location: coordinates,
-    image:
-      "https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Empire_State_Building_%28aerial_view%29.jpg/400px-Empire_State_Building_%28aerial_view%29.jpg",
-    creator,
+    image: req.file.path,
+    creator: req.userData.userId,
   });
 
   let user;
   try {
-    user = await User.findById(creator);
+    user = await User.findById(req.userData.userId);
   } catch (err) {
     const error = new HttpError("장소 등록 실패, 서버에 문제가 있습니다.", 500);
     return next(error);
@@ -164,33 +164,35 @@ const deletePlace = async (req, res, next) => {
     place = await Place.findById(placeId).populate("creator");
   } catch (err) {
     const error = new HttpError(
-      "삭제할 수 없습니다. 서버에 문제가 생겼습니다.",
+      "Something went wrong, could not delete place.1",
       500
     );
     return next(error);
   }
 
   if (!place) {
-    const error = new HttpError("장소를 찾을 수 없습니다.", 404);
+    const error = new HttpError("Could not find place for this id.", 404);
     return next(error);
   }
-
+  const imagePath = place.image;
   try {
     const sess = await mongoose.startSession();
     sess.startTransaction();
-    await place.remove({ session: sess });
+    await place.deleteOne({ session: sess });
     place.creator.places.pull(place);
     await place.creator.save({ session: sess });
     await sess.commitTransaction();
   } catch (err) {
     const error = new HttpError(
-      "삭제할 수 없습니다. 서버에 문제가 생겼습니다.",
+      "Something went wrong, could not delete place.2",
       500
     );
     return next(error);
   }
-
-  res.status(200).json({ message: "장소 삭제 완료." });
+  fs.unlink(imagePath, (err) => {
+    console.log(err);
+  });
+  res.status(200).json({ message: "Deleted place." });
 };
 
 exports.getPlaceById = getPlaceById;
