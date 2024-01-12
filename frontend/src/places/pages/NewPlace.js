@@ -9,6 +9,7 @@ import {
 } from '../../shared/util/validators';
 import { useForm } from '../../shared/hooks/form-hook';
 import './PlaceForm.css';
+import ImgUpload from '../../shared/components/FormElements/ImgUpload';
 import { AuthContext } from '../../shared/context/auth-context';
 import { useHttpClient } from '../../shared/hooks/http-hook';
 import ErrorModal from '../../shared/components/UIElements/ErrorModal';
@@ -32,26 +33,27 @@ const NewPlace = () => {
         value: '',
         isValid: false,
       },
+      image: {
+        value: null,
+        isValid: false,
+      },
     },
     false
   );
 
   const placeSubmitHandler = async (event) => {
     event.preventDefault();
+
     try {
-      await sendRequest(
-        'http://localhost:5000/api/place',
-        'POST',
-        JSON.stringify({
-          title: formState.inputs.title.value,
-          description: formState.inputs.description.value,
-          address: formState.inputs.address.value,
-          creator: auth.userId,
-        }),
-        {
-          'Content-Type': 'application/json',
-        }
-      );
+      const formData = new FormData();
+      formData.append('title', formState.inputs.title.value);
+      formData.append('description', formState.inputs.description.value);
+      formData.append('address', formState.inputs.address.value);
+      formData.append('creator', auth.userId);
+      formData.append('image', formState.inputs.image.value);
+      await sendRequest('http://localhost:5000/api/place', 'POST', formData, {
+        Authorization: 'Bearer ' + auth.token,
+      });
       navigate('/');
     } catch (err) {}
   };
@@ -85,6 +87,11 @@ const NewPlace = () => {
           validators={[VALIDATOR_REQUIRE()]}
           errorText="Please enter a valid address."
           onInput={inputHandler}
+        />
+        <ImgUpload
+          id="image"
+          onInput={inputHandler}
+          errorText="이미지를 업로드 해주세요."
         />
         <Button type="submit" disabled={!formState.isValid}>
           ADD PLACE
