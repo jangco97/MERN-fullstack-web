@@ -12,6 +12,7 @@ import { useForm } from '../../shared/hooks/form-hook';
 import { AuthContext } from '../../shared/context/auth-context';
 import { useHttpClient } from '../../shared/hooks/http-hook';
 import ErrorModal from '../../shared/components/UIElements/ErrorModal';
+import ImgUpload from '../../shared/components/FormElements/ImgUpload';
 import LoadingSpinner from '../../shared/components/UIElements/LoadingSpinner';
 import './Auth.css';
 
@@ -39,6 +40,7 @@ const Auth = () => {
         {
           ...formState.inputs,
           name: undefined,
+          image: undefined,
         },
         formState.inputs.email.isValid && formState.inputs.password.isValid
       );
@@ -48,6 +50,10 @@ const Auth = () => {
           ...formState.inputs,
           name: {
             value: '',
+            isValid: false,
+          },
+          image: {
+            value: null,
             isValid: false,
           },
         },
@@ -76,17 +82,15 @@ const Auth = () => {
       } catch (err) {}
     } else {
       try {
+        const formData = new FormData();
+        formData.append('name', formState.inputs.name.value);
+        formData.append('email', formState.inputs.email.value);
+        formData.append('password', formState.inputs.password.value);
+        formData.append('image', formState.inputs.image.value);
         const responseData = await sendRequest(
           'http://localhost:5000/api/user/signup',
           'POST',
-          JSON.stringify({
-            name: formState.inputs.name.value,
-            email: formState.inputs.email.value,
-            password: formState.inputs.password.value,
-          }),
-          {
-            'Content-Type': 'application/json',
-          }
+          formData
         );
         auth.login(responseData.userId, responseData.token);
       } catch (err) {}
@@ -108,7 +112,7 @@ const Auth = () => {
               type="text"
               label="Your Name"
               validators={[VALIDATOR_REQUIRE()]}
-              errorText="Please enter a name."
+              errorText="이름을 입력해주세요."
               onInput={inputHandler}
             />
           )}
@@ -118,7 +122,7 @@ const Auth = () => {
             type="email"
             label="E-Mail"
             validators={[VALIDATOR_EMAIL()]}
-            errorText="Please enter a valid email address."
+            errorText="@가 들어간 이메일 형식이여야 합니다."
             onInput={inputHandler}
           />
           <Input
@@ -127,9 +131,12 @@ const Auth = () => {
             type="password"
             label="Password"
             validators={[VALIDATOR_MINLENGTH(5)]}
-            errorText="Please enter a valid password, at least 5 characters."
+            errorText="최소 5개의 문자가 필요합니다.."
             onInput={inputHandler}
           />
+          {!isLoginMode && (
+            <ImgUpload center id="image" onInput={inputHandler} />
+          )}
           <Button type="submit" disabled={!formState.isValid}>
             {isLoginMode ? 'LOGIN' : 'SIGNUP'}
           </Button>
