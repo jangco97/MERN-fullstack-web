@@ -1,5 +1,6 @@
 main {
   margin-top: 5rem;
+  box-sizing: border-box;
 }
 
 .loader {
